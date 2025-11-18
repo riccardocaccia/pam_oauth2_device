@@ -210,20 +210,13 @@ void make_authorization_request(const Config config,
     {
         if (config.debug) printf("Response to authorizaation request: %s\n", readBuffer.c_str());
         auto data = json::parse(readBuffer);
-        response->user_code = data.at("user_code").get<std::string>();
-        response->device_code = data.at("device_code").get<std::string>();
-        if      (data.contains("verification_uri")) {
-		response->verification_uri = data.at("verification_uri").get<std::string>();
-	}
-	else if (data.contains("verification_url")) {
-		response->verification_uri = data.at("verification_url").get<std::string>();
-	}
-	else {
-		throw ResponseError();
-	}
-
-        response->verification_uri_complete = 
-		data.value("verification_uri_complete", std::string{});
+        response->user_code = data.at("user_code");
+        response->device_code = data.at("device_code");
+        response->verification_uri = data.at("verification_uri");
+        if (data.find("verification_uri_complete") != data.end())
+        {
+            response->verification_uri_complete = data.at("verification_uri_complete");
+        }
     }
     catch (json::exception &e)
     {
@@ -319,102 +312,36 @@ void get_userinfo(const Config &config,
     std::string readBuffer;
 
     curl = curl_easy_init();
-    if (!curl) 
-		throw NetworkError();
+    if (!curl)
+        throw NetworkError();
     curl_easy_setopt(curl, CURLOPT_URL, userinfo_endpoint);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-    struct curl_slist *headers = nullptr;
-    headers = curl_slist_append(headers, std::string("Authorization: Bearer " + std::string(token)).c_str());
+
+    std::string auth_header = "Authorization: Bearer ";
+    auth_header += token;
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, auth_header.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
-    if (res != CURLE_OK) 
-		throw NetworkError();
-
-    try {
-        // show raw token response
-        if (config.debug) {
-            printf("Userinfo token: %s\n", readBuffer.c_str());
-        }
-
+    if (res != CURLE_OK)
+        throw NetworkError();
+    try
+    {
+        if (config.debug) printf("Userinfo token: %s\n", readBuffer.c_str());
         auto data = json::parse(readBuffer);
-
-        // required fields
-        userinfo->sub      = data.at("sub").get<std::string>();
-        userinfo->username = data.at(username_attribute).get<std::string>();
-        userinfo->name     = data.at("name").get<std::string>();
-
-        // safe extract of groups in the groups claim
-        if (data.contains("groups") && data["groups"].is_array()) {
-            userinfo->groups = data["groups"].get<std::vector<std::string>>();
-        }
-        else {
-            userinfo->groups.clear();
-        }
-
-        // and for eduperson_entitlement (es. urn:…:group:…:#…)
-        if (data.contains("eduperson_entitlement") && data["eduperson_entitlement"].is_array()) {
-            std::smatch m;
-            static const std::regex re_group(".*:group:([^#]+)");
-            for (const auto &ent : data["eduperson_entitlement"]) {
-                if (!ent.is_string()) continue;
-                std::string s = ent.get<std::string>();
-
-		        // DEBUG helper (REMOVE) -> ignore :res: elements but prints them	
-                if (config.debug) {
-                    printf("DEBUG: entitlement found: %s\n", s.c_str());
-                }
-				
-                if (s.find(":group:") == std::string::npos) {
-                    if (config.debug) {
-                        printf("DEBUG: skipped (not a group entitlement)\n");
-                    }
-                    continue;
-                }
-				
-                if (std::regex_search(s, m, re_group) && m.size() > 1) {
-                    std::string full = m[1].str(); 
-                    auto pos_role = full.find(":role=");
-                    std::string raw = (pos_role == std::string::npos
-                    ? full
-                    : full.substr(0, pos_role));
-
-                    // extract last ':' -> group in lsaai
-                    auto last_colon = raw.find_last_of(':');
-                    std::string group_name = (last_colon == std::string::npos
-                    ? raw
-                    : raw.substr(last_colon + 1));
-
-				userinfo->groups.push_back(group_name);
-
-                if (config.debug) {
-                    printf("DEBUG: extracted final group: %s\n", group_name.c_str());
-                }
-              }
-            }
-		  }
-		
-        // debug print all claims & groups
-        if (config.debug) {
-            printf("DEBUG: raw userinfo JSON: %s\n", readBuffer.c_str());
-            printf("DEBUG: sub=\"%s\", username=\"%s\", name=\"%s\"\n",
-                   userinfo->sub.c_str(),
-                   userinfo->username.c_str(),
-                   userinfo->name.c_str());
-            printf("DEBUG: userinfo groups (%zu): ", userinfo->groups.size());
-            for (auto &g : userinfo->groups) {
-                printf("%s, ", g.c_str());
-            }
-            printf("\n");
-        }
+        userinfo->sub = data.at("sub");
+        userinfo->username = data.at(username_attribute);
+        userinfo->name = data.at("name");
+        userinfo->groups = data.at("groups").get<std::vector<std::string>>();
     }
-    catch (json::exception &e) {
+    catch (json::exception &e)
+    {
         throw ResponseError();
     }
 }
-
 
 void show_prompt(pam_handle_t *pamh,
                  int qr_error_correction_level,
@@ -470,16 +397,8 @@ void notify_user( const char *user,
 bool is_authorized(Config *config,
                    Userinfo *userinfo)
 {
-    if (config->groups.empty()) {
-        if (config->debug) {
-            printf("DEBUG: no groups configured, skipping group check. ");
-            printf("User belongs to %zu group(s): ", userinfo->groups.size());
-            for (auto &g : userinfo->groups) {
-                printf("%s, ", g.c_str());
-            }
-            printf("\n");
-        }
-	return true;
+    if (config->groups.size() == 0) {
+        return true;
     }
     std::vector<std::string> groups_intsec;
     std::sort(userinfo->groups.begin(), userinfo->groups.end());
