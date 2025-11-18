@@ -383,7 +383,7 @@ void get_userinfo(const Config &config,
                     ? full
                     : full.substr(0, pos_role));
 
-                    // prendi solo l'ultimo pezzo dopo l'ultimo ':'
+                    // only the last ':' -> group in lsaai
                     auto last_colon = raw.find_last_of(':');
                     std::string group_name = (last_colon == std::string::npos
                     ? raw
