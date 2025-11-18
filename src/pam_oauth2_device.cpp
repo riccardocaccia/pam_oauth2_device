@@ -354,39 +354,36 @@ void get_userinfo(const Config &config,
             userinfo->groups.clear();
         }
 
-		// and for eduperson_entitlement (es. urn:…:group:…:#…)
+        // and for eduperson_entitlement (es. urn:…:group:…:#…)
         if (data.contains("eduperson_entitlement") && data["eduperson_entitlement"].is_array()) {
-        std::smatch m;
-        static const std::regex re_group(".*:group:([^#]+)");
-        for (const auto &ent : data["eduperson_entitlement"]) {
-            if (!ent.is_string()) continue;
-            std::string s = ent.get<std::string>();
+            std::smatch m;
+            static const std::regex re_group(".*:group:([^#]+)");
+            for (const auto &ent : data["eduperson_entitlement"]) {
+                if (!ent.is_string()) continue;
+                std::string s = ent.get<std::string>();
 
-            // Use only entitlement with groups
-            if (s.find(":group:") == std::string::npos) {
-                continue;
-            }
-			
-            if (config.debug) {
-                printf("DEBUG: group entitlement used: %s\n", s.c_str());
-            }
-
-            // Estrai la parte dopo :group: e prima di #...
-            if (std::regex_search(s, m, re_group) && m.size() > 1) {
-                std::string full = m[1].str();
-                auto pos_role = full.find(":role=");
-                std::string group_name =
-                    (pos_role == std::string::npos
-                        ? full
-                        : full.substr(0, pos_role));
-
-                userinfo->groups.push_back(group_name);
-
+		        // DEBUG helper (REMOVE) -> ignore :res: elements but prints them	
                 if (config.debug) {
-                    printf("DEBUG: extracted group: %s\n", group_name.c_str());
+                    printf("DEBUG: entitlement found: %s\n", s.c_str());
                 }
-              }
-           }
+				
+                if (s.find(":group:") == std::string::npos) {
+                    if (config.debug) {
+                        printf("DEBUG: skipped (not a group entitlement)\n");
+                    }
+                    continue;
+                }
+				
+                if (std::regex_search(s, m, re_group) && m.size() > 1) {
+                    std::string full = m[1].str(); 
+                    // extract last ':'
+                    auto pos_role = full.find(":role=");
+                    std::string group_name = (pos_role==std::string::npos 
+				    ? full
+                                    : full.substr(0, pos_role));
+                    userinfo->groups.push_back(group_name);
+                }
+            }
         }
 
 		
