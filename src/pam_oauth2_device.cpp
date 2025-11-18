@@ -362,10 +362,14 @@ void get_userinfo(const Config &config,
                 if (!ent.is_string()) continue;
                 std::string s = ent.get<std::string>();
 
-		        // ignore :res: elements		
-                if (s.find(":res:") != std::string::npos) {
+		        // DEBUG helper (REMOVE) -> ignore :res: elements but prints them	
+                if (config.debug) {
+                    printf("DEBUG: entitlement found: %s\n", s.c_str());
+                }
+				
+                if (s.find(":group:") == std::string::npos) {
                     if (config.debug) {
-                        printf("DEBUG: Ignoring entitlement (res): %s\n", s.c_str());
+                        printf("DEBUG: skipped (not a group entitlement)\n");
                     }
                     continue;
                 }
