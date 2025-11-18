@@ -376,16 +376,27 @@ void get_userinfo(const Config &config,
 				
                 if (std::regex_search(s, m, re_group) && m.size() > 1) {
                     std::string full = m[1].str(); 
-                    // extract last ':'
                     auto pos_role = full.find(":role=");
-                    std::string group_name = (pos_role==std::string::npos 
-				    ? full
-                                    : full.substr(0, pos_role));
-                    userinfo->groups.push_back(group_name);
-                }
-            }
-        }
+                    
+					// estrai tutto fino a :role=...
+                    std::string raw = (pos_role == std::string::npos
+                    ? full
+                    : full.substr(0, pos_role));
 
+                    // prendi solo l'ultimo pezzo dopo l'ultimo ':'
+                    auto last_colon = raw.find_last_of(':');
+                    std::string group_name = (last_colon == std::string::npos
+                    ? raw
+                    : raw.substr(last_colon + 1));
+
+				userinfo->groups.push_back(group_name);
+
+                if (config.debug) {
+                    printf("DEBUG: extracted final group: %s\n", group_name.c_str());
+                }
+              }
+            }
+		  }
 		
         // debug print all claims & groups
         if (config.debug) {
