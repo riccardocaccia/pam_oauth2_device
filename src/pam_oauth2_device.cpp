@@ -361,6 +361,15 @@ void get_userinfo(const Config &config,
             for (const auto &ent : data["eduperson_entitlement"]) {
                 if (!ent.is_string()) continue;
                 std::string s = ent.get<std::string>();
+
+		        // ignore :res: elements		
+                if (s.find(":res:") != std::string::npos) {
+                    if (config.debug) {
+                        printf("DEBUG: Ignoring entitlement (res): %s\n", s.c_str());
+                    }
+                    continue;
+                }
+				
                 if (std::regex_search(s, m, re_group) && m.size() > 1) {
                     std::string full = m[1].str(); 
                     // extract last ':'
