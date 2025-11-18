@@ -377,13 +377,11 @@ void get_userinfo(const Config &config,
                 if (std::regex_search(s, m, re_group) && m.size() > 1) {
                     std::string full = m[1].str(); 
                     auto pos_role = full.find(":role=");
-                    
-					// estrai tutto fino a :role=...
                     std::string raw = (pos_role == std::string::npos
                     ? full
                     : full.substr(0, pos_role));
 
-                    // only the last ':' -> group in lsaai
+                    // extract last ':' -> group in lsaai
                     auto last_colon = raw.find_last_of(':');
                     std::string group_name = (last_colon == std::string::npos
                     ? raw
