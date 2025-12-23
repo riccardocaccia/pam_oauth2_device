@@ -1,6 +1,6 @@
 # PAM module for OAuth 2.0 Device flow
 
-This is a PAM module based on a fork of [stfc/pam_oauth2_device](https://github.com/stfc/pam_oauth2_device) that lets you login using OpenID Connect credentials. It is tailored to work with the [INDIGO-IAM](https://indigo-iam.github.io/v/current/docs/) service. 
+This is a PAM module based on a fork of [stfc/pam_oauth2_device](https://github.com/stfc/pam_oauth2_device) that lets you login using OpenID Connect credentials. It is tailored to work with the [INDIGO-IAM](https://indigo-iam.github.io/v/current/docs/) service and LS AAI and EGI check-in (those who use eduperson entitlements). 
 
 It uses the OAuth2 Device Flow, which means that during the login process, you will click a link and log in to your OpenID Connect Provider, which will then authenticate you. 
 
